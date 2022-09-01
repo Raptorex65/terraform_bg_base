@@ -31,17 +31,6 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"]
 }
 
-#Define the VPC 
-resource "aws_vpc" "vpc" {
-  cidr_block = var.vpc_cidr
-
-  tags = {
-    Name        = var.vpc_name
-    Environment = "demo_environment"
-    Terraform   = "true"
-  }
-}
-
 #Deploy the private subnets
 resource "aws_subnet" "private_subnets" {
   for_each          = var.private_subnets
@@ -270,3 +259,101 @@ resource "aws_key_pair" "generated" {
     ignore_changes = [key_name]
   }
 }
+
+/*resource "aws_subnet" "list_subnet" {
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = var.ip["prod"]
+  availability_zone = var.us-east-1-azs[0]
+}
+*/
+resource "aws_subnet" "list_subnet" {
+  for_each          = var.env
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = each.value.ip
+  availability_zone = each.value.az
+}
+
+data "aws_s3_bucket" "data_bucket" {
+  bucket = "my-data-bucket-for-terraform"
+}
+
+resource "aws_iam_policy" "policy" {
+  name        = "data_bucket_policy"
+  description = "Deny access to my bucket"
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "s3:Get*",
+          "s3:List*"
+        ],
+        "Resource" : "${data.aws_s3_bucket.data_bucket.arn}"
+      }
+    ]
+  })
+}
+
+output "data-bucket-arn" {
+  value = data.aws_s3_bucket.data_bucket.arn
+}
+output "data-bucket-domain-name" {
+  value = data.aws_s3_bucket.data_bucket.bucket_domain_name
+}
+output "data-bucket-region" {
+  value = "The ${data.aws_s3_bucket.data_bucket.id} bucket is located in ${data.aws_s3_bucket.data_bucket.region}"
+}
+
+locals {
+  maximum = max(var.num_1, var.num_2, var.num_3)
+  minimum = min(var.num_1, var.num_2, var.num_3, 44, 20)
+}
+output "max_value" {
+  value = local.maximum
+}
+output "min_value" {
+  value = local.minimum
+}
+
+#Define the VPC---Usage for upper built-in function
+resource "aws_vpc" "vpc" {
+  cidr_block = var.vpc_cidr
+  tags = {
+    Name        = upper(var.vpc_name)
+    Environment = upper(var.environment)
+    Terraform   = upper("true")
+  }
+  enable_dns_hostnames = true
+}
+
+locals {
+  ingress_rules = [
+    {
+      port        = 443
+      description = "Port 443"
+    },
+    {
+      port        = 80
+      description = "Port 80"
+    }
+  ]
+}
+
+resource "aws_security_group" "main" {
+  name   = "core-sg"
+  vpc_id = aws_vpc.vpc.id
+
+  dynamic "ingress" {
+    for_each = local.ingress_rules
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.port
+      to_port     = ingress.value.port
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+}
+
+

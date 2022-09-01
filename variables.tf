@@ -50,3 +50,81 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "no_caps" {
+  type = string
+  validation {
+    condition     = lower(var.no_caps) == var.no_caps
+    error_message = "Value must be in all lower case."
+  }
+}
+variable "character_limit" {
+  type = string
+  validation {
+    condition     = length(var.character_limit) == 3
+    error_message = "This variable must contain only 3 characters."
+  }
+}
+variable "ip_address" {
+  type = string
+  validation {
+    condition     = can(regex("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$", var.ip_address))
+    error_message = "Must be an IP address of the form X.X.X.X."
+  }
+}
+
+variable "phone_number" {
+  type      = string
+  sensitive = true
+  default   = "867-5309"
+}
+
+variable "us-east-1-azs" {
+  type = list(string)
+  default = [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e"
+  ]
+}
+
+variable "ip" {
+  type = map(string)
+  default = {
+    prod = "10.0.150.0/24"
+    dev  = "10.0.250.0/24"
+  }
+}
+
+
+variable "env" {
+  type = map(any)
+  default = {
+    prod = {
+      ip = "10.0.150.0/24"
+      az = "us-east-1a"
+    }
+    dev = {
+      ip = "10.0.250.0/24"
+      az = "us-east-1e"
+    }
+  }
+}
+
+variable "num_1" {
+  type        = number
+  description = "Numbers for function labs"
+  default     = 88
+}
+variable "num_2" {
+  type        = number
+  description = "Numbers for function labs"
+  default     = 73
+}
+variable "num_3" {
+  type        = number
+  description = "Numbers for function labs"
+  default     = 52
+}
